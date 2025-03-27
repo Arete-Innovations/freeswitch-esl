@@ -18,16 +18,18 @@ pub enum OriginateErrorCode {
 pub struct Originate {
     from: String,
     to: String,
+    gateway: String,
     connection: Arc<EslConnection>,
     uuid: Option<String>
 }
 
  impl Originate {
     /// Create new originate object
-    pub fn new(connection: Arc<EslConnection>, from: String, to: String) -> Self {
+    pub fn new(connection: Arc<EslConnection>, from: String, to: String, gateway: String) -> Self {
         Self {
             from,
             to,
+            gateway,
             connection,
             uuid: None
         }
@@ -62,8 +64,8 @@ pub struct Originate {
     /// Execute an originate call
     pub async fn execute(&mut self) -> Result<(), OriginateErrorCode> {
         let command = format!(
-            "originate {{effective_caller_id_number={}}}sofia/gateway/signalwire/{} &park()",
-            self.from, self.to
+            "originate {{effective_caller_id_number={}}}sofia/gateway/{gateway}/{} &park()",
+            self.from, self.to, self.gateway
         );
     
         let response = self.connection.api(command.as_str()).await;
