@@ -1,8 +1,10 @@
+#![warn(missing_docs)]
+
 use crate::code::{Code, ParseCode};
 use crate::error::EslError;
 use crate::esl::EslConnectionType;
-use crate::event::Event;
 use crate::io::EslCodec;
+use crate::{EventHandler, EventManager};
 use futures::SinkExt;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -15,19 +17,28 @@ use tokio::sync::{
     oneshot::{channel, Sender},
     Mutex,
 };
+use crate::event::Event;
+
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, FramedWrite};
 use tracing::trace;
+
 #[derive(Debug)]
+struct EventAwait(String, String);
+
+
 /// contains Esl connection with freeswitch
 pub struct EslConnection {
     password: String,
     commands: Arc<Mutex<VecDeque<Sender<Event>>>>,
     transport_tx: Arc<Mutex<FramedWrite<WriteHalf<TcpStream>, EslCodec>>>,
     background_jobs: Arc<Mutex<HashMap<String, Sender<Event>>>>,
+    wait_for_events: Arc<Mutex<HashMap<String, Sender<Event>>>>,
     connected: AtomicBool,
     pub(crate) call_uuid: Option<String>,
     connection_info: Option<HashMap<String, Value>>,
+    event_manager: Arc<Mutex<EventManager>>
+
 }
 
 impl EslConnection {
@@ -42,7 +53,27 @@ impl EslConnection {
         let value = self.connection_info.as_ref()?.get(key)?.clone();
         serde_json::from_value(value).ok()?
     }
+    /// Bind a callback event
+    pub async  fn bind_event(&self, event: String, handler: EventHandler) {
+        let mut manager = self.event_manager.lock().await;
+        manager.register_handler(event, handler);
+    }
 
+    /*
+      pub fn register_handler(&mut self, event: String, handler: EventHandler) {
+        self.handlers
+            .entry(event)
+            .or_insert_with(Vec::new)
+            .push(handler);
+    }
+    
+     */
+
+
+    /*   pub async fn wait_for_event(){
+
+        }
+    */
     /// returns call uuid in outbound mode
     pub async fn call_uuid(&self) -> Option<String> {
         self.call_uuid.clone()
@@ -69,6 +100,19 @@ impl EslConnection {
         Ok(rx.await?)
     }
 
+    pub async fn wait_for_event(&self, waiter: String, event: String) {
+        let (tx, rx) = channel();
+
+        let mut hash = event.clone();
+        hash.push_str(&waiter);
+
+        println!("hash inserted {}", hash.clone());
+
+        self.wait_for_events.lock().await.insert(hash.clone(), tx);
+
+        let resp = rx.await;
+    }
+
     pub(crate) async fn new(
         stream: TcpStream,
         password: impl ToString,
@@ -78,7 +122,11 @@ impl EslConnection {
         let commands = Arc::new(Mutex::new(VecDeque::new()));
         let inner_commands = Arc::clone(&commands);
         let background_jobs = Arc::new(Mutex::new(HashMap::new()));
+        let wait_for_events = Arc::new(Mutex::new(HashMap::new()));
         let inner_background_jobs = Arc::clone(&background_jobs);
+        let inner_wait_for_events_jobs = Arc::clone(&wait_for_events);
+        let event_manager = Arc::new(Mutex::new(EventManager::new()));;
+        let event_manager_inner = event_manager.clone();
         let esl_codec = EslCodec {};
         let (read_half, write_half) = tokio::io::split(stream);
         let mut transport_rx = FramedRead::new(read_half, esl_codec.clone());
@@ -90,10 +138,12 @@ impl EslConnection {
             password: password.to_string(),
             commands,
             background_jobs,
+            wait_for_events,
             transport_tx,
             connected: AtomicBool::new(false),
             call_uuid: None,
             connection_info: None,
+            event_manager: event_manager
         };
         tokio::spawn(async move {
             loop {
@@ -105,7 +155,7 @@ impl EslConnection {
                                 return;
                             }
                             "text/event-json" => {
-                                trace!("got event-json");
+                         
                                 let data = event
                                     .body()
                                     .clone()
@@ -114,14 +164,41 @@ impl EslConnection {
                                 let event_body = parse_json_body(&data)
                                     .expect("Unable to parse body of event-json");
                                 let job_uuid = event_body.get("Job-UUID");
+
+                        
+                                if event_body.contains_key("Event-Name")
+                                    && event_body.contains_key("Unique-ID")
+                                {
+
+                                    let event_name = event_body.get("Event-Name");
+                                    let name = event_name.unwrap().as_str().unwrap().to_string();
+                                    let unique_id =
+                                        event_body.get("Unique-ID").unwrap().as_str().unwrap();
+                          
+                                    let mut hash = name.clone();
+                                    hash.push_str(unique_id);
+
+
+                                    {
+                                        event_manager_inner.lock().await.trigger_event(name, &event_body).await;
+                                    }
+
+                                    if let Some(tx) = inner_wait_for_events_jobs.lock().await.remove(&hash) {
+                                        tx.send(event.clone()).expect("Unable to send message.");
+                                    }
+
+                                    
+                                }
+
                                 if let Some(job_uuid) = job_uuid {
                                     let job_uuid = job_uuid.as_str().unwrap();
                                     if let Some(tx) =
                                         inner_background_jobs.lock().await.remove(job_uuid)
                                     {
-                                        tx.send(event)
+                                        tx.send(event.clone())
                                             .expect("Unable to send channel message from bgapi");
                                     }
+
                                     trace!("continued");
                                     continue;
                                 }
@@ -139,12 +216,12 @@ impl EslConnection {
                                                         "Unable to send channel message from bgapi",
                                                     );
                                                 }
-                                                trace!("continued");
-                                                trace!("got channel execute complete");
+                                         
                                             }
                                         }
                                     }
                                 }
+                              
                                 continue;
                             }
                             _ => {

@@ -78,8 +78,12 @@ pub(crate) mod error;
 pub(crate) mod esl;
 pub(crate) mod event;
 pub(crate) mod io;
+pub(crate) mod originate;
+pub(crate) mod channel;
 
 pub use connection::EslConnection;
 pub use error::*;
 pub use esl::*;
 pub use event::*;
+pub use originate::*;
+pub use channel::*;
