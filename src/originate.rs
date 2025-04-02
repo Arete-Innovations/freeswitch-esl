@@ -64,7 +64,7 @@ pub struct Originate {
     /// Execute an originate call
     pub async fn execute(&mut self) -> Result<(), OriginateErrorCode> {
         let command = format!(
-            "originate {{effective_caller_id_number={}}}sofia/gateway/{gateway}/{} &park()",
+            "originate {{effective_caller_id_number={}}}sofia/gateway/{}/{} &park()",
             self.from, self.to, self.gateway
         );
     
@@ -78,7 +78,8 @@ pub struct Originate {
                 _ => return Err(OriginateErrorCode::UNIMPLEMENTED),
             }
         }
-    
+        // originate {origination_caller_id_number=1234567890,origination_caller_id_name="Fake Name"}
+    //originate {origination_caller_id_number=158765533}sofia/gateway/signalwire/+40740057835 &park()
         self.uuid = Some(response.unwrap().to_string());
         Ok(())
     }

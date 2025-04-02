@@ -23,11 +23,11 @@ use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, FramedWrite};
 use tracing::trace;
 
-#[derive(Debug)]
 struct EventAwait(String, String);
 
 
 /// contains Esl connection with freeswitch
+#[derive(Debug)]
 pub struct EslConnection {
     password: String,
     commands: Arc<Mutex<VecDeque<Sender<Event>>>>,
@@ -58,22 +58,7 @@ impl EslConnection {
         let mut manager = self.event_manager.lock().await;
         manager.register_handler(event, handler);
     }
-
-    /*
-      pub fn register_handler(&mut self, event: String, handler: EventHandler) {
-        self.handlers
-            .entry(event)
-            .or_insert_with(Vec::new)
-            .push(handler);
-    }
     
-     */
-
-
-    /*   pub async fn wait_for_event(){
-
-        }
-    */
     /// returns call uuid in outbound mode
     pub async fn call_uuid(&self) -> Option<String> {
         self.call_uuid.clone()

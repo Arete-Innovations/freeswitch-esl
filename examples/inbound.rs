@@ -42,7 +42,7 @@ async fn main() -> Result<(), EslError> {
 
 
     // event driver mechanism
-    let handle_answer: EventHandler = Box::new(move |event_body: &HashMap<String, Value>| {
+    let handle_answer: EventHandler = EventHandler::new(Box::new(move |event_body: &HashMap<String, Value>| {
         let event_body = event_body.clone(); // Clone the event_body to avoid lifetime issues
         Box::pin(async move {
             // You can access the body safely here
@@ -54,7 +54,7 @@ async fn main() -> Result<(), EslError> {
                         .to_string();
             println!("Call answer from: {}", name);
         })
-    });
+    }));
 
     inbound
         .bind_event("CHANNEL_ANSWER".to_string(), handle_answer)
