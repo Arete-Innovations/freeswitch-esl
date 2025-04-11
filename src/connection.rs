@@ -73,7 +73,9 @@ impl EslConnection {
     pub fn connected(&self) -> bool {
         self.connected.load(Ordering::Relaxed)
     }
-    pub(crate) async fn send(&self, item: &[u8]) -> Result<(), EslError> {
+
+    // send raw meesage without freeswitch response
+    pub async fn send(&self, item: &[u8]) -> Result<(), EslError> {
         let mut transport = self.transport_tx.lock().await;
         transport.send(item).await
     }
