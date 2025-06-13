@@ -1,9 +1,9 @@
 use crate::Channel;
+use crate::EslConnection;
 use crate::EslError;
+use std::error::Error as StdError;
 #[allow(missing_docs)]
 use std::sync::Arc;
-
-use crate::EslConnection;
 
 /// Originate enum
 #[allow(missing_docs)]
@@ -151,6 +151,44 @@ impl FromStr for OriginateErrorCode {
     }
 }
 
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub enum BridgeError {
+    ChannelNotFound,
+    InvalidArguments,
+    BridgeFailure,
+    ChannelDestroyed,
+    ProtocolMismatch,
+    MediaError,
+    PermissionDenied,
+    Timeout,
+    EslError(EslError),
+    Unimplemented,
+}
+
+impl FromStr for BridgeError {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "CHAN_NOT_FOUND" | "NO_SUCH_CHANNEL" => Ok(BridgeError::ChannelNotFound),
+            "INVALID_ARGS" => Ok(BridgeError::InvalidArguments),
+            "BRIDGE_FAILED" => Ok(BridgeError::BridgeFailure),
+            "DESTROYED" => Ok(BridgeError::ChannelDestroyed),
+            "PROTOCOL_MISMATCH" => Ok(BridgeError::ProtocolMismatch),
+            "MEDIA_ERROR" => Ok(BridgeError::MediaError),
+            "NO_PERMISSION" => Ok(BridgeError::PermissionDenied),
+            "TIMEOUT" => Ok(BridgeError::Timeout),
+            _ => Err(()),
+        }
+    }
+}
+
+impl From<EslError> for BridgeError {
+    fn from(err: EslError) -> Self {
+        BridgeError::EslError(err)
+    }
+}
 /// Originate struct
 pub struct Originate {
     from: String,
@@ -190,10 +228,21 @@ impl Originate {
     }
 
     /// Bridge two channels
-    pub async fn bridge(&self, lega_uuid: String, legb_uuid: String) {
-        let command = format!("uuid_bridge {} {}", lega_uuid, legb_uuid);
-        eprintln!("command {}", command);
-        self.connection.api(command.as_str()).await;
+    pub async fn bridge(&self, lega_uuid: String, legb_uuid: String) -> Result<(), BridgeError> {
+        let cmd = format!("uuid_bridge {} {}", lega_uuid, legb_uuid);
+        let response = self.connection.api(&cmd).await?;
+
+        match response.as_str().trim() {
+            "+OK" => Ok(()),
+            e => {
+                let err_str = e.to_string();
+                if let Ok(mapped) = BridgeError::from_str(&err_str) {
+                    Err(mapped)
+                } else {
+                    Err(BridgeError::Unimplemented)
+                }
+            }
+        }
     }
 
     /// Playback audio file to specific channel
