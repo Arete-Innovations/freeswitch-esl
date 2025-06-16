@@ -225,7 +225,7 @@ impl EslConnection {
         match connection_type {
             EslConnectionType::Inbound => {
                 let auth_response = connection.auth().await?;
-                trace!("auth_response {:?}", auth_response);
+                
                 connection
                     .subscribe(vec!["BACKGROUND_JOB", "CHANNEL_EXECUTE_COMPLETE"])
                     .await?;
