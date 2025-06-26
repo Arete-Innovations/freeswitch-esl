@@ -1,8 +1,9 @@
 use std::num::ParseIntError;
 
+use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Ord, PartialOrd, Eq, Hash, Error)]
+#[derive(Clone, Debug, PartialEq, Ord, PartialOrd, Eq, Hash, Error, Serialize, Deserialize)]
 #[allow(missing_docs)]
 /// Error type for Esl
 pub enum EslError {

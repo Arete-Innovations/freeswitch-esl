@@ -112,7 +112,7 @@ impl EslConnection {
         let wait_for_events = Arc::new(Mutex::new(HashMap::new()));
         let inner_background_jobs = Arc::clone(&background_jobs);
         let inner_wait_for_events_jobs = Arc::clone(&wait_for_events);
-        let event_manager = Arc::new(Mutex::new(EventManager::new()));;
+        let event_manager = Arc::new(Mutex::new(EventManager::new()));
         let event_manager_inner = event_manager.clone();
         let esl_codec = EslCodec {};
         let (read_half, write_half) = tokio::io::split(stream);
