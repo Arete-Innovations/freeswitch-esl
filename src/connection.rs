@@ -112,7 +112,7 @@ impl EslConnection {
         let wait_for_events = Arc::new(Mutex::new(HashMap::new()));
         let inner_background_jobs = Arc::clone(&background_jobs);
         let inner_wait_for_events_jobs = Arc::clone(&wait_for_events);
-        let event_manager = Arc::new(Mutex::new(EventManager::new()));;
+        let event_manager = Arc::new(Mutex::new(EventManager::new()));
         let event_manager_inner = event_manager.clone();
         let esl_codec = EslCodec {};
         let (read_half, write_half) = tokio::io::split(stream);
@@ -225,7 +225,7 @@ impl EslConnection {
         match connection_type {
             EslConnectionType::Inbound => {
                 let auth_response = connection.auth().await?;
-                trace!("auth_response {:?}", auth_response);
+                
                 connection
                     .subscribe(vec!["BACKGROUND_JOB", "CHANNEL_EXECUTE_COMPLETE"])
                     .await?;
