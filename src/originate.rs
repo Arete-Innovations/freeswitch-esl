@@ -1,3 +1,6 @@
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+
 use crate::Channel;
 use crate::EslConnection;
 use crate::EslError;
@@ -7,6 +10,7 @@ use std::sync::Arc;
 
 /// Originate enum
 #[allow(missing_docs)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OriginateErrorCode {
     Unimplemented,
     Unspecified,
@@ -155,7 +159,7 @@ impl FromStr for OriginateErrorCode {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BridgeError {
     ChannelNotFound,
     InvalidArguments,
