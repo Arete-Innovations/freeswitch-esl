@@ -80,9 +80,9 @@ pub enum OriginateErrorCode {
     UserNotRegistered,
     ProgressTimeout,
     GatewayDown,
+    InvalidUrl,
     Unhandled,
 }
-
 
 impl fmt::Display for OriginateErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -152,6 +152,7 @@ impl fmt::Display for OriginateErrorCode {
             UserNotRegistered => "User Not Registered",
             ProgressTimeout => "Progress Timeout",
             GatewayDown => "Gateway Down",
+            InvalidUrl => "Invalid Url",
             Unhandled => "Unhandled",
         };
         write!(f, "{}", s)
@@ -228,6 +229,7 @@ impl FromStr for OriginateErrorCode {
             "USER_NOT_REGISTERED" => Ok(UserNotRegistered),
             "PROGRESS_TIMEOUT" => Ok(ProgressTimeout),
             "GATEWAY_DOWN" => Ok(GatewayDown),
+            "INVALID_URL" => Ok(InvalidUrl),
             "UNHANDLED" => Ok(Unhandled),
             _ => Err(()),
         }
@@ -368,7 +370,7 @@ impl Originate {
     pub async fn execute(&mut self) -> Result<String, OriginateErrorCode> {
         let command = format!(
             "originate {{effective_caller_id_number={}}}sofia/gateway/{}/{} &park()",
-            self.from, self.to, self.gateway
+            self.from, self.gateway, self.to
         );
 
 
