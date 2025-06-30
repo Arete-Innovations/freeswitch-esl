@@ -5,6 +5,7 @@ use crate::Channel;
 use crate::EslConnection;
 use crate::EslError;
 use std::error::Error as StdError;
+
 use std::fmt;
 
 use std::str::FromStr;
@@ -159,6 +160,8 @@ impl fmt::Display for OriginateErrorCode {
     }
 }
 
+
+
 impl FromStr for OriginateErrorCode {
     type Err = ();
 
@@ -269,6 +272,7 @@ impl FromStr for BridgeError {
     }
 }
 
+
 impl fmt::Display for BridgeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -285,6 +289,7 @@ impl fmt::Display for BridgeError {
         }
     }
 }
+
 
 impl From<EslError> for BridgeError {
     fn from(err: EslError) -> Self {
