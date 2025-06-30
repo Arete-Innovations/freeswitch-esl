@@ -297,11 +297,10 @@ pub struct Originate {
     to: String,
     gateway: String,
     connection: Arc<EslConnection>,
-    uuid: Option<String>,
-    uuid: Option<String>,
+    uuid: Option<String>
 }
 
-impl Originate {
+
 impl Originate {
     /// Create new originate object
     pub fn new(connection: Arc<EslConnection>, from: String, to: String, gateway: String) -> Self {
@@ -310,7 +309,6 @@ impl Originate {
             to,
             gateway,
             connection,
-            uuid: None,
             uuid: None,
         }
     }
@@ -323,9 +321,6 @@ impl Originate {
         self.connection
             .wait_for_event(self.uuid.clone().unwrap(), "CHANNEL_ANSWER".to_string())
             .await;
-        self.connection
-            .wait_for_event(self.uuid.clone().unwrap(), "CHANNEL_ANSWER".to_string())
-            .await;
     }
 
     /// Async api for awaiting a hangup event
@@ -335,10 +330,6 @@ impl Originate {
             .await;
     }
 
-        self.connection
-            .wait_for_event(self.uuid.clone().unwrap(), "CHANNEL_HANGUP".to_string())
-            .await;
-    }
 
     /// Bridge two channels
     pub async fn bridge(&self, lega_uuid: String, legb_uuid: String) -> Result<(), BridgeError> {
@@ -359,14 +350,13 @@ impl Originate {
     }
 
     /// Playback audio file to specific channel
-    pub async fn broadcast(&self, uuid: String, path: String) {
+
     pub async fn broadcast(&self, uuid: String, path: String) {
         let command = format!("uuid_broadcast {} {}", uuid, path);
         self.connection.api(command.as_str()).await;
     }
 
     /// Execute an originate call
-    pub async fn execute(&mut self) -> Result<String, OriginateErrorCode> {
     pub async fn execute(&mut self) -> Result<String, OriginateErrorCode> {
         let command = format!(
             "originate {{effective_caller_id_number={}}}sofia/gateway/{}/{} &park()",
