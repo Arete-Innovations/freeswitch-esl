@@ -81,6 +81,7 @@ pub enum OriginateErrorCode {
     ProgressTimeout,
     GatewayDown,
     InvalidUrl,
+    InvalidProfile,
     Unhandled,
 }
 
@@ -153,6 +154,7 @@ impl fmt::Display for OriginateErrorCode {
             ProgressTimeout => "Progress Timeout",
             GatewayDown => "Gateway Down",
             InvalidUrl => "Invalid Url",
+            InvalidProfile => "Invalid Profile",
             Unhandled => "Unhandled",
         };
         write!(f, "{}", s)
@@ -230,6 +232,7 @@ impl FromStr for OriginateErrorCode {
             "PROGRESS_TIMEOUT" => Ok(ProgressTimeout),
             "GATEWAY_DOWN" => Ok(GatewayDown),
             "INVALID_URL" => Ok(InvalidUrl),
+            "INVALID_PROFILE" => Ok(InvalidProfile),
             "UNHANDLED" => Ok(Unhandled),
             _ => Err(()),
         }
