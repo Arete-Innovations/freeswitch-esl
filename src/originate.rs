@@ -165,8 +165,11 @@ impl FromStr for OriginateErrorCode {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let clean_string = s.trim().trim_matches('"').to_uppercase();
+        let clean = clean_string.as_str();
+
         use OriginateErrorCode::*;
-        match s {
+        match clean {
             "UNIMPLEMENTED" => Ok(Unimplemented),
             "UNSPECIFIED" => Ok(Unspecified),
             "NO_ROUTE_TRANSIT_NET" => Ok(NoRouteTransitNet),
@@ -300,9 +303,8 @@ pub struct Originate {
     to: String,
     gateway: String,
     connection: Arc<EslConnection>,
-    uuid: Option<String>
+    uuid: Option<String>,
 }
-
 
 impl Originate {
     /// Create new originate object
@@ -332,7 +334,6 @@ impl Originate {
             .wait_for_event(self.uuid.clone().unwrap(), "CHANNEL_HANGUP".to_string())
             .await;
     }
-
 
     /// Bridge two channels
     pub async fn bridge(&self, lega_uuid: String, legb_uuid: String) -> Result<(), BridgeError> {
@@ -365,7 +366,6 @@ impl Originate {
             "originate {{effective_caller_id_number={}}}sofia/gateway/{}/{} &park()",
             self.from, self.gateway, self.to
         );
-
 
         let response = self.connection.api(command.as_str()).await;
 
