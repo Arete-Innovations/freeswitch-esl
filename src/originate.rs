@@ -162,6 +162,82 @@ impl fmt::Display for OriginateErrorCode {
 
 
 
+
+impl fmt::Display for OriginateErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use OriginateErrorCode::*;
+        let s = match self {
+            Unimplemented => "Unimplemented",
+            Unspecified => "Unspecified",
+            NoRouteTransitNet => "No Route Transit Net",
+            NoRouteDestination => "No Route Destination",
+            ChannelUnacceptable => "Channel Unacceptable",
+            CallAwardedDelivered => "Call Awarded Delivered",
+            NormalClearing => "Normal Clearing",
+            UserBusy => "User Busy",
+            NoUserResponse => "No User Response",
+            NoAnswer => "No Answer",
+            SubscriberAbsent => "Subscriber Absent",
+            CallRejected => "Call Rejected",
+            NumberChanged => "Number Changed",
+            RedirectionToNewDestination => "Redirection To New Destination",
+            ExchangeRoutingError => "Exchange Routing Error",
+            DestinationOutOfOrder => "Destination Out Of Order",
+            InvalidNumberFormat => "Invalid Number Format",
+            FacilityRejected => "Facility Rejected",
+            ResponseToStatusEnquiry => "Response To Status Enquiry",
+            NormalUnspecified => "Normal Unspecified",
+            NormalCircuitCongestion => "Normal Circuit Congestion",
+            NetworkOutOfOrder => "Network Out Of Order",
+            NormalTemporaryFailure => "Normal Temporary Failure",
+            SwitchCongestion => "Switch Congestion",
+            AccessInfoDiscarded => "Access Info Discarded",
+            RequestedChanUnavail => "Requested Channel Unavailable",
+            PreEmpted => "Pre-Empted",
+            FacilityNotSubscribed => "Facility Not Subscribed",
+            OutgoingCallBarred => "Outgoing Call Barred",
+            IncomingCallBarred => "Incoming Call Barred",
+            BearercapabilityNotauth => "Bearer capability Not authorized",
+            BearercapabilityNotavail => "Bearer capability Not available",
+            ServiceUnavailable => "Service Unavailable",
+            BearercapabilityNotimpl => "Bearer capability Not implemented",
+            ChanNotImplemented => "Channel Not Implemented",
+            FacilityNotImplemented => "Facility Not Implemented",
+            ServiceNotImplemented => "Service Not Implemented",
+            InvalidCallReference => "Invalid Call Reference",
+            IncompatibleDestination => "Incompatible Destination",
+            InvalidMsgUnspecified => "Invalid Message Unspecified",
+            MandatoryIeMissing => "Mandatory IE Missing",
+            MessageTypeNonexist => "Message Type Nonexistent",
+            WrongMessage => "Wrong Message",
+            IeNonexist => "IE Nonexistent",
+            InvalidIeContents => "Invalid IE Contents",
+            WrongCallState => "Wrong Call State",
+            RecoveryOnTimerExpire => "Recovery On Timer Expire",
+            MandatoryIeLengthError => "Mandatory IE Length Error",
+            ProtocolError => "Protocol Error",
+            Interworking => "Interworking",
+            OriginatorCancel => "Originator Cancel",
+            Crash => "Crash",
+            SystemShutdown => "System Shutdown",
+            LoseRace => "Lose Race",
+            ManagerRequest => "Manager Request",
+            BlindTransfer => "Blind Transfer",
+            AttendedTransfer => "Attended Transfer",
+            AllottedTimeout => "Allotted Timeout",
+            UserChallenge => "User Challenge",
+            MediaTimeout => "Media Timeout",
+            PickedOff => "Picked Off",
+            UserNotRegistered => "User Not Registered",
+            ProgressTimeout => "Progress Timeout",
+            GatewayDown => "Gateway Down",
+            Unhandled => "Unhandled",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+
 impl FromStr for OriginateErrorCode {
     type Err = ();
 
