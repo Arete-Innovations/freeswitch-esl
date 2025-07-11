@@ -4,6 +4,7 @@ use serde_derive::Serialize;
 use crate::Channel;
 use crate::EslConnection;
 use crate::EslError;
+use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt;
 
@@ -385,4 +386,40 @@ impl Originate {
             }
         }
     }
+    /// Execute an originate call with custom variables
+    pub async fn execute_with_vars(
+        &mut self,
+        variables: HashMap<String, String>,
+    ) -> Result<String, OriginateErrorCode> {
+        
+        let mut vars = format!("effective_caller_id_number={}", self.from);
+
+        
+        for (k, v) in variables {
+            vars.push_str(&format!(",{}={}", k, v));
+        }
+
+        let command = format!(
+            "originate {{{}}}sofia/gateway/{}/{} &park()",
+            vars, self.gateway, self.to
+        );
+
+        let response = self.connection.api(command.as_str()).await;
+
+        match response {
+            Ok(uuid) => {
+                self.uuid = Some(uuid.to_string());
+                Ok(uuid)
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                if let Ok(mapped) = OriginateErrorCode::from_str(&err_str) {
+                    Err(mapped)
+                } else {
+                    Err(OriginateErrorCode::Unimplemented)
+                }
+            }
+        }
+    }
+
 }
