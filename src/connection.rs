@@ -21,7 +21,7 @@ use crate::event::Event;
 
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, FramedWrite};
-use tracing::trace;
+use tracing::{trace, warn};
 
 struct EventAwait(String, String);
 
@@ -133,94 +133,102 @@ impl EslConnection {
             event_manager: event_manager
         };
         tokio::spawn(async move {
-            loop {
-                if let Some(Ok(event)) = transport_rx.next().await {
-                    if let Some(event_type) = event.headers.get("Content-Type") {
-                        match event_type.as_str().unwrap() {
-                            "text/disconnect-notice" => {
-                                trace!("got disconnect notice");
-                                return;
-                            }
-                            "text/event-json" => {
-                         
-                                let data = event
-                                    .body()
-                                    .clone()
-                                    .expect("Unable to get body of event-json");
+            while let Some(event_result) = transport_rx.next().await {
+                let event = match event_result {
+                    Ok(event) => event,
+                    Err(err) => {
+                        warn!("ESL transport read error: {err}, shutting down reader task");
+                        break;
+                    }
+                };
 
-                                let event_body = parse_json_body(&data)
-                                    .expect("Unable to parse body of event-json");
-                                let job_uuid = event_body.get("Job-UUID");
+                if let Some(event_type) = event.headers.get("Content-Type") {
+                    match event_type.as_str().unwrap() {
+                        "text/disconnect-notice" => {
+                            trace!("got disconnect notice");
+                            return;
+                        }
+                        "text/event-json" => {
+                     
+                            let data = event
+                                .body()
+                                .clone()
+                                .expect("Unable to get body of event-json");
 
-                        
-                                if event_body.contains_key("Event-Name")
-                                    && event_body.contains_key("Unique-ID")
+                            let event_body = parse_json_body(&data)
+                                .expect("Unable to parse body of event-json");
+                            let job_uuid = event_body.get("Job-UUID");
+
+                    
+                            if event_body.contains_key("Event-Name")
+                                && event_body.contains_key("Unique-ID")
+                            {
+
+                                let event_name = event_body.get("Event-Name");
+                                let name = event_name.unwrap().as_str().unwrap().to_string();
+                                let unique_id =
+                                    event_body.get("Unique-ID").unwrap().as_str().unwrap();
+                      
+                                let mut hash = name.clone();
+                                hash.push_str(unique_id);
+
+
                                 {
-
-                                    let event_name = event_body.get("Event-Name");
-                                    let name = event_name.unwrap().as_str().unwrap().to_string();
-                                    let unique_id =
-                                        event_body.get("Unique-ID").unwrap().as_str().unwrap();
-                          
-                                    let mut hash = name.clone();
-                                    hash.push_str(unique_id);
-
-
-                                    {
-                                        event_manager_inner.lock().await.trigger_event(name, &event_body).await;
-                                    }
-
-                                    if let Some(tx) = inner_wait_for_events_jobs.lock().await.remove(&hash) {
-                                        tx.send(event.clone()).expect("Unable to send message.");
-                                    }
-
-                                    
+                                    event_manager_inner.lock().await.trigger_event(name, &event_body).await;
                                 }
 
-                                if let Some(job_uuid) = job_uuid {
-                                    let job_uuid = job_uuid.as_str().unwrap();
-                                    if let Some(tx) =
-                                        inner_background_jobs.lock().await.remove(job_uuid)
-                                    {
-                                        tx.send(event.clone())
-                                            .expect("Unable to send channel message from bgapi");
-                                    }
-
-                                    trace!("continued");
-                                    continue;
+                                if let Some(tx) = inner_wait_for_events_jobs.lock().await.remove(&hash) {
+                                    tx.send(event.clone()).expect("Unable to send message.");
                                 }
-                                if let Some(application_uuid) = event_body.get("Application-UUID") {
-                                    let job_uuid = application_uuid.as_str().unwrap();
-                                    if let Some(event_name) = event_body.get("Event-Name") {
-                                        if let Some(event_name) = event_name.as_str() {
-                                            if event_name == "CHANNEL_EXECUTE_COMPLETE" {
-                                                if let Some(tx) = inner_background_jobs
-                                                    .lock()
-                                                    .await
-                                                    .remove(job_uuid)
-                                                {
-                                                    tx.send(event).expect(
-                                                        "Unable to send channel message from bgapi",
-                                                    );
-                                                }
-                                         
+
+                                
+                            }
+
+                            if let Some(job_uuid) = job_uuid {
+                                let job_uuid = job_uuid.as_str().unwrap();
+                                if let Some(tx) =
+                                    inner_background_jobs.lock().await.remove(job_uuid)
+                                {
+                                    tx.send(event.clone())
+                                        .expect("Unable to send channel message from bgapi");
+                                }
+
+                                trace!("continued");
+                                continue;
+                            }
+                            if let Some(application_uuid) = event_body.get("Application-UUID") {
+                                let job_uuid = application_uuid.as_str().unwrap();
+                                if let Some(event_name) = event_body.get("Event-Name") {
+                                    if let Some(event_name) = event_name.as_str() {
+                                        if event_name == "CHANNEL_EXECUTE_COMPLETE" {
+                                            if let Some(tx) = inner_background_jobs
+                                                .lock()
+                                                .await
+                                                .remove(job_uuid)
+                                            {
+                                                tx.send(event).expect(
+                                                    "Unable to send channel message from bgapi",
+                                                );
                                             }
+                                     
                                         }
                                     }
                                 }
-                              
-                                continue;
                             }
-                            _ => {
-                                trace!("got another event {:?}", event);
-                            }
+                          
+                            continue;
+                        }
+                        _ => {
+                            trace!("got another event {:?}", event);
                         }
                     }
-                    if let Some(tx) = inner_commands.lock().await.pop_front() {
-                        tx.send(event).expect("msg");
-                    }
+                }
+                if let Some(tx) = inner_commands.lock().await.pop_front() {
+                    tx.send(event).expect("msg");
                 }
             }
+
+            trace!("ESL transport_rx finished or closed, exiting reader task");
         });
         match connection_type {
             EslConnectionType::Inbound => {
